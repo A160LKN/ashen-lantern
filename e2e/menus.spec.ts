@@ -89,3 +89,15 @@ test('без параметра ?test тестовый API недоступен'
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => 'game' in ((window as any).__ashen ?? {}))).toBe(false);
 });
+
+test('короткое нажатие внутри одного кадра не теряется (регрессия BUG-010)', async ({ page }) => {
+  await openGame(page);
+  await startNewGame(page);
+  // Цикл кадров стоит: нажатие и отпускание Esc приходят до следующего кадра — как при низком FPS.
+  await page.evaluate(() => (window as any).__ashen.pauseLoop());
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => (window as any).__ashen.step(3));
+  const scenes = await activeScenes(page);
+  await page.evaluate(() => (window as any).__ashen.resumeLoop());
+  expect(scenes).toContain('Pause');
+});

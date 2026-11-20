@@ -77,6 +77,11 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
   private achTimer = 0;
   private oilWarned = false;
   private bagFullToastAt = 0;
+  /**
+   * Разовые нажатия, собранные из событий клавиатуры между кадрами.
+   * Опрос JustDown терял нажатие, если клавишу нажали и отпустили внутри одного кадра (низкий FPS, BUG-010).
+   */
+  private pressed = new Set<string>();
   private beaconSprite: Phaser.GameObjects.Sprite | null = null;
   private beaconLight: LightSource | null = null;
 
@@ -170,6 +175,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     });
     this.events.on(Phaser.Scenes.Events.RESUME, () => {
       this.input.keyboard?.resetKeys();
+      this.pressed.clear();
       this.inputLockUntil = this.time.now + 150;
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -345,6 +351,10 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
       SHIFT: 'SHIFT', E: 'E', SPACE: 'SPACE', ESC: 'ESC', I: 'I', TAB: 'TAB', Q: 'Q',
     }) as Record<string, Phaser.Input.Keyboard.Key>;
     this.input.mouse?.disableContextMenu();
+    this.pressed = new Set();
+    kb.on('keydown', (e: KeyboardEvent) => {
+      if (!e.repeat) this.pressed.add(e.code);
+    });
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (!p.leftButtonDown() || this.dialogOpen || this.dead) return;
       const wp = this.cameras.main.getWorldPoint(p.x, p.y);
@@ -357,6 +367,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
 
   private onBlur(): void {
     this.input.keyboard?.resetKeys();
+    this.pressed.clear();
   }
 
   private setupParticles(): void {
@@ -413,6 +424,9 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
       Session.runtime.boss = { name: this.boss.def.name, hp: Math.max(0, this.boss.hp), max: this.boss.maxHp };
     }
 
+    // Забираем нажатия этого кадра; всё, что не использовано, не переходит в следующий кадр.
+    const pressed = this.pressed;
+    this.pressed = new Set();
     if (this.dialogOpen || this.transitioning) {
       this.player.setVelocity(0, 0);
       this.promptIcon.setVisible(false);
@@ -434,7 +448,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     const locked = time < this.inputLockUntil || this.dead;
     const mx = locked ? 0 : (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
     const my = locked ? 0 : (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
-    const attack = !locked && (k.SPACE.isDown || this.queuedAttack);
+    const attack = !locked && (k.SPACE.isDown || pressed.has('Space') || this.queuedAttack);
     this.player.setStaminaMax(derived.maxStamina);
     this.player.updatePlayer(dt, { mx, my, sprint: k.SHIFT.isDown, attack, aim: this.queuedAttack ? this.queuedAim : undefined }, derived);
     this.queuedAttack = false;
@@ -442,15 +456,15 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
 
     for (const e of this.enemies) e.updateAI(dt);
     this.updatePickups();
-    this.updateInteraction(locked);
+    this.updateInteraction(locked, pressed.has('KeyE'));
 
     if (!locked) {
-      if (Phaser.Input.Keyboard.JustDown(k.Q)) this.drinkPotion();
-      if (Phaser.Input.Keyboard.JustDown(k.ESC)) {
+      if (pressed.has('KeyQ')) this.drinkPotion();
+      if (pressed.has('Escape')) {
         openOverlay(this, 'Pause');
         return;
       }
-      if (Phaser.Input.Keyboard.JustDown(k.I) || Phaser.Input.Keyboard.JustDown(k.TAB)) {
+      if (pressed.has('KeyI') || pressed.has('Tab')) {
         openOverlay(this, 'Inventory');
         return;
       }
@@ -475,7 +489,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     }
   }
 
-  private updateInteraction(locked: boolean): void {
+  private updateInteraction(locked: boolean, interactPressed: boolean): void {
     const px = this.player.x;
     const py = this.player.feetY;
     let best: Interactable | null = null;
@@ -493,7 +507,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     if (best && !this.dead) {
       Session.runtime.prompt = bestLabel!;
       this.promptIcon.setVisible(true).setPosition(best.x, best.y - 16 + Math.sin(this.time.now / 200) * 1.5);
-      if (!locked && Phaser.Input.Keyboard.JustDown(this.keys.E)) best.act();
+      if (!locked && interactPressed) best.act();
     } else {
       Session.runtime.prompt = '';
       this.promptIcon.setVisible(false);
