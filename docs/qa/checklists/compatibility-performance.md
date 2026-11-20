@@ -2,7 +2,7 @@
 
 ## Браузеры
 - [x] Chromium — все E2E (локально и в CI)
-- [x] Firefox — все E2E (CI, Ubuntu)
+- [ ] Firefox — E2E в CI падают (4+ сценария), разбирается
 - [ ] Safari / WebKit — не проверялось
 - [ ] Реальные Chrome/Edge/Firefox на Windows — не проверялось
 
