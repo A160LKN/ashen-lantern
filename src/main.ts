@@ -9,6 +9,7 @@ import {
   AchievementsScene, GameOverScene, HelpScene, InventoryScene, PauseScene, SaveLoadScene, SettingsScene, ShopScene, VictoryScene,
 } from './scenes/overlays';
 import { UIScene } from './scenes/UIScene';
+import { installTestHooks } from './testing/testHooks';
 
 async function loadFonts(): Promise<void> {
   try {
@@ -45,7 +46,7 @@ async function start(): Promise<void> {
       InventoryScene, ShopScene, SettingsScene, SaveLoadScene, AchievementsScene, HelpScene,
     ],
   });
-  (window as unknown as { __game: Phaser.Game }).__game = game;
+  installTestHooks(game);
   // Если контейнер ещё не имел размера при старте (скрытая вкладка/панель), пересчитываем масштаб.
   const parent = document.getElementById('game');
   if (parent && 'ResizeObserver' in window) new ResizeObserver(() => game.scale.refresh()).observe(parent);

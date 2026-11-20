@@ -100,7 +100,7 @@ export function loadGame(storage: StorageLike, slot: number): LoadResult {
 
 /** Миграции старых форматов. v1 (ранняя версия): монеты хранились в player.gold, не было масла для фонаря. */
 export function migrate(data: any, fromVersion: number): any {
-  let d = { ...data };
+  const d = { ...data };
   if (fromVersion <= 1) {
     d.inventory = { ...(d.inventory ?? {}) };
     if (typeof d.player?.gold === 'number' && d.inventory.coins === undefined) d.inventory.coins = d.player.gold;

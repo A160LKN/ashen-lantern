@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/A160LKN/ashen-lantern/schemas/save.schema.json",
+  "title": "Ashen Lantern save envelope (version 2)",
+  "type": "object",
+  "required": ["version", "savedAt", "checksum", "summary", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 2 },
+    "savedAt": { "type": "integer", "minimum": 0 },
+    "checksum": { "type": "string", "pattern": "^[0-9a-f]{8}$" },
+    "summary": {
+      "type": "object",
+      "required": ["levelName", "playerLevel", "playTimeMs", "coins"],
+      "additionalProperties": false,
+      "properties": {
+        "levelName": { "type": "string", "minLength": 1 },
+        "playerLevel": { "type": "integer", "minimum": 1, "maximum": 30 },
+        "playTimeMs": { "type": "number", "minimum": 0 },
+        "coins": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "data": { "$ref": "#/definitions/gameData" }
+  },
+  "definitions": {
+    "count": { "type": "integer", "minimum": 0 },
+    "upgradeLevel": { "type": "integer", "minimum": 0, "maximum": 5 },
+    "gameData": {
+      "type": "object",
+      "required": ["levelIndex", "player", "upgrades", "inventory", "levels", "quests", "stats"],
+      "additionalProperties": false,
+      "properties": {
+        "levelIndex": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "player": {
+          "type": "object",
+          "required": ["level", "xp", "hp", "oil"],
+          "additionalProperties": false,
+          "properties": {
+            "level": { "type": "integer", "minimum": 1, "maximum": 30 },
+            "xp": { "$ref": "#/definitions/count" },
+            "hp": { "type": "number", "minimum": 0 },
+            "oil": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "upgrades": {
+          "type": "object",
+          "required": ["blade", "vitality", "agility", "lantern", "endurance"],
+          "additionalProperties": false,
+          "properties": {
+            "blade": { "$ref": "#/definitions/upgradeLevel" },
+            "vitality": { "$ref": "#/definitions/upgradeLevel" },
+            "agility": { "$ref": "#/definitions/upgradeLevel" },
+            "lantern": { "$ref": "#/definitions/upgradeLevel" },
+            "endurance": { "$ref": "#/definitions/upgradeLevel" }
+          }
+        },
+        "inventory": {
+          "type": "object",
+          "required": ["coins", "potions", "keys", "shards"],
+          "additionalProperties": false,
+          "properties": {
+            "coins": { "$ref": "#/definitions/count" },
+            "potions": { "type": "integer", "minimum": 0, "maximum": 9 },
+            "keys": { "$ref": "#/definitions/count" },
+            "shards": { "$ref": "#/definitions/count" }
+          }
+        },
+        "levels": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["removed", "beaconLit", "bossDefeated", "checkpoint", "damageTaken"],
+            "additionalProperties": false,
+            "properties": {
+              "removed": { "type": "array", "items": { "type": "string" } },
+              "beaconLit": { "type": "boolean" },
+              "bossDefeated": { "type": "boolean" },
+              "damageTaken": { "type": "number", "minimum": 0 },
+              "checkpoint": {
+                "oneOf": [
+                  { "type": "null" },
+                  {
+                    "type": "object",
+                    "required": ["x", "y"],
+                    "additionalProperties": false,
+                    "properties": { "x": { "type": "number", "minimum": 0 }, "y": { "type": "number", "minimum": 0 } }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "quests": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["started", "progress", "done"],
+            "additionalProperties": false,
+            "properties": {
+              "started": { "type": "boolean" },
+              "progress": { "$ref": "#/definitions/count" },
+              "done": { "type": "boolean" }
+            }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "required": ["kills", "chestsOpened", "upgradesBought", "potionsUsed", "coinsEarned", "playTimeMs"],
+          "additionalProperties": false,
+          "properties": {
+            "kills": { "type": "object", "additionalProperties": { "$ref": "#/definitions/count" } },
+            "chestsOpened": { "$ref": "#/definitions/count" },
+            "upgradesBought": { "$ref": "#/definitions/count" },
+            "potionsUsed": { "$ref": "#/definitions/count" },
+            "coinsEarned": { "$ref": "#/definitions/count" },
+            "playTimeMs": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}
