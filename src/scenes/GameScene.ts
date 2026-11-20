@@ -22,6 +22,7 @@ import { checkAchievements, persistProfile, Session } from '../systems/Session';
 import { openOverlay } from '../ui/widgets';
 import { setSolid, type Grid } from '../world/grid';
 import { animateTiles, buildLevel, type BuiltLevel } from '../world/LevelBuilder';
+import { findDropPosition, magnetVelocity } from '../world/loot';
 import { buildGrid, ENEMY_CHARS, parseLevel, type ParsedEntity, type ParsedLevel } from '../world/levelParser';
 import { Lighting, type LightSource } from '../world/Lighting';
 
@@ -75,6 +76,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
   private tileTimer = 0;
   private achTimer = 0;
   private oilWarned = false;
+  private bagFullToastAt = 0;
   private beaconSprite: Phaser.GameObjects.Sprite | null = null;
   private beaconLight: LightSource | null = null;
 
@@ -317,6 +319,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     const s = this.pickups.create(x, y, tex, frameIdx) as Phaser.Physics.Arcade.Sprite;
     const b = s.body as Phaser.Physics.Arcade.Body;
     b.setSize(10, 10);
+    b.setCollideWorldBounds(true);
     s.setData({ kind, value, id, readyAt: this.time.now + (scatter ? 350 : 0) });
     s.setDepth(DEPTH.entityBase + y);
     if (kind === 'coin' && value < 5) s.play({ key: 'coin:spin', startFrame: randInt(0, 3) });
@@ -326,8 +329,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
       s.once(Phaser.GameObjects.Events.DESTROY, () => this.lighting.remove(l));
     }
     if (scatter) {
-      const tx = x + randRange(-14, 14);
-      const ty = y + randRange(-10, 10);
+      const { x: tx, y: ty } = findDropPosition(this.grid, x, y);
       this.tweens.add({ targets: s, x: tx, duration: 350, ease: 'Quad.easeOut' });
       this.tweens.add({ targets: s, y: { from: y, to: ty }, duration: 350, ease: 'Bounce.easeOut' });
     } else {
@@ -467,13 +469,9 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     for (const obj of this.pickups.getChildren()) {
       const s = obj as Phaser.Physics.Arcade.Sprite;
       if (s.getData('kind') !== 'coin' || this.time.now < s.getData('readyAt')) continue;
-      const d = Phaser.Math.Distance.Between(s.x, s.y, px, py);
-      if (d < 42) {
-        this.tweens.killTweensOf(s);
-        const a = Math.atan2(py - s.y, px - s.x);
-        const sp = 70 + (42 - d) * 4;
-        (s.body as Phaser.Physics.Arcade.Body).setVelocity(Math.cos(a) * sp, Math.sin(a) * sp);
-      }
+      const v = magnetVelocity(px, py, s.x, s.y);
+      if (v.vx !== 0 || v.vy !== 0) this.tweens.killTweensOf(s);
+      (s.body as Phaser.Physics.Arcade.Body).setVelocity(v.vx, v.vy);
     }
   }
 
@@ -810,7 +808,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
 
   private beaconLabel(): string {
     const data = this.data_;
-    if (currentLevel(data).beaconLit) return data.levelIndex >= LEVEL_COUNT - 1 ? 'Последний маяк горит' : 'Войти в портал';
+    if (currentLevel(data).beaconLit) return data.levelIndex >= LEVEL_COUNT - 1 ? 'Последний маяк горит — посмотреть финал' : 'Войти в портал';
     return `Зажечь маяк (${data.inventory.shards}/${this.def.shardsRequired})`;
   }
 
@@ -819,7 +817,9 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     const lp = currentLevel(data);
     const last = data.levelIndex >= LEVEL_COUNT - 1;
     if (lp.beaconLit) {
-      if (!last) this.goToNextLevel();
+      // На последнем уровне повторно показываем финал (например, после «Продолжить» с автосохранения).
+      if (last) this.onVictory(false);
+      else this.goToNextLevel();
       return;
     }
     const need = this.def.shardsRequired - data.inventory.shards;
@@ -838,7 +838,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     if (last) {
       this.toast('Последний маяк зажжён! Тьма отступает...', P.gold2);
       this.transitioning = true;
-      this.time.delayedCall(2600, () => this.onVictory());
+      this.time.delayedCall(2600, () => this.onVictory(true));
     } else {
       this.toast('Маяк зажжён! Портал открыт — войдите в него', P.gold2);
       saveGame(Session.storage, SAVE_SLOTS[0], data);
@@ -874,8 +874,14 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     });
   }
 
-  private onVictory(): void {
+  /** firstTime=false — повторный просмотр финала: статистика побед не увеличивается. */
+  private onVictory(firstTime = true): void {
     const data = this.data_;
+    if (!firstTime) {
+      audio.playMusic('victory');
+      openOverlay(this, 'Victory');
+      return;
+    }
     checkAchievements({ event: 'level_complete', levelDamageTaken: currentLevel(data).damageTaken });
     checkAchievements({ event: 'victory' });
     Session.profile.wins++;
@@ -912,7 +918,13 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
         this.floatText(s.x, s.y - 6, `+${value}`, P.gold2);
         break;
       case 'potion':
-        if (!addPotion(data)) return;
+        if (!addPotion(data)) {
+          if (this.time.now > this.bagFullToastAt) {
+            this.bagFullToastAt = this.time.now + 3000;
+            this.toast('Сумка полна: больше 9 зелий не унести', P.gray3);
+          }
+          return;
+        }
         audio.play('pickup');
         this.toast('Зелье здоровья (Q — выпить)', P.red3);
         break;
@@ -947,6 +959,27 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     }
     if (res.levelsGained > 0) this.onLevelUp();
     bus.emit('quests:changed');
+  }
+
+  // ------------------------------------------------------------------ для тестового API
+  debugEnemies(): { type: string; x: number; y: number; hp: number; state: string }[] {
+    return this.enemies.map((e) => ({ type: e.def.type, x: Math.round(e.cx), y: Math.round(e.cy), hp: e.hp, state: e.aiState }));
+  }
+
+  /** Наносит урон ближайшему врагу так же, как удар игрока (с лутом и опытом). */
+  debugDamageNearest(amount: number): string | null {
+    let best: Enemy | null = null;
+    let bd = Infinity;
+    for (const e of this.enemies) {
+      const d = Phaser.Math.Distance.Between(e.cx, e.cy, this.player.x, this.player.y);
+      if (!e.dead && d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    if (!best) return null;
+    if (best.takeHit(amount, this.player.x, this.player.y)) this.killEnemy(best);
+    return best.def.type;
   }
 
   // ------------------------------------------------------------------ эффекты

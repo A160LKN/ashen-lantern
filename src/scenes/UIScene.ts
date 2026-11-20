@@ -49,6 +49,7 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     this.toasts = [];
     this.questTexts = [];
+    this.questSignature = '';
     this.dialog = null;
 
     // Левая верхняя панель показателей
@@ -125,9 +126,15 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: [sub, title], alpha: 1, duration: 600, delay: 300, hold: 1800, yoyo: true, onComplete: () => { sub.destroy(); title.destroy(); } });
   }
 
+  private questSignature = '';
+
   private refreshQuests(): void {
     const data = Session.data;
     if (!data) return;
+    // Перерисовываем трекер только при изменении заданий, а не каждую секунду.
+    const sig = JSON.stringify([data.levelIndex, levelQuests(data.levelIndex).map((q) => data.quests[q.id] ?? null)]);
+    if (sig === this.questSignature) return;
+    this.questSignature = sig;
     for (const t of this.questTexts) t.destroy();
     this.questTexts = [];
     const list = levelQuests(data.levelIndex).filter((q) => data.quests[q.id]?.started);
