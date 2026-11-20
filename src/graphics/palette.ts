@@ -1,0 +1,30 @@
+/** Единая палитра игры. */
+export const P = {
+  outline: '#140f1c',
+  black: '#0b0910',
+  white: '#ede6f2',
+  gray0: '#2b2836', gray1: '#4a4657', gray2: '#7d7891', gray3: '#b3aec2',
+  grass0: '#1f3b27', grass1: '#2a4f31', grass2: '#376438', grass3: '#4f8043', grass4: '#73a352',
+  dirt0: '#3d2b20', dirt1: '#563d2b', dirt2: '#71523a', dirt3: '#8d6a4b',
+  stone0: '#24222c', stone1: '#35323f', stone2: '#4b4756', stone3: '#666170', stone4: '#8c8696',
+  water0: '#0f2238', water1: '#173556', water2: '#245078', water3: '#4c84aa', water4: '#9ccbe0',
+  wood0: '#2f1d13', wood1: '#4b2f1d', wood2: '#6e4628', wood3: '#93653a',
+  leaf0: '#10261a', leaf1: '#173822', leaf2: '#21502c', leaf3: '#346c37', leaf4: '#4f8c45',
+  fire0: '#7a2414', fire1: '#c4471f', fire2: '#ee8a2e', fire3: '#ffc861', fire4: '#fff1c2',
+  ash0: '#231f22', ash1: '#322c2e', ash2: '#453d3d', ash3: '#5d5351',
+  lava0: '#4a0f0c', lava1: '#9a2617', lava2: '#e0571f', lava3: '#ffa53d', lava4: '#ffe08a',
+  skin: '#e2b48a', skin2: '#b07f5a',
+  cloak0: '#142c3a', cloak1: '#1f4657', cloak2: '#34707f', cloak3: '#5aa3a8',
+  bone0: '#7f7968', bone1: '#b9b29a', bone2: '#e3dcc2',
+  slime0: '#22451a', slime1: '#4a8a28', slime2: '#86c43e', slime3: '#c9f07a',
+  wisp0: '#2b1f5c', wisp1: '#5a3fb0', wisp2: '#9a7cf0', wisp3: '#ddd0ff',
+  gold0: '#7a4d10', gold1: '#c48a1c', gold2: '#f2c443', gold3: '#fff0a0',
+  red0: '#4d1019', red1: '#8f1f31', red2: '#d1394c', red3: '#f27a7a',
+  robe0: '#3b2431', robe1: '#5c3949', robe2: '#7d5163',
+  steel0: '#5a6170', steel1: '#8d96a8', steel2: '#cdd4e0',
+  moss0: '#28402a', moss1: '#3b5a35',
+  purple0: '#1c1428', purple1: '#2b2040', purple2: '#43335f',
+  ui0: '#120e1a', ui1: '#1d1729', ui2: '#2c2340', ui3: '#4a3c66', ui4: '#7b68a3',
+} as const;
+
+export const hex = (c: string): number => parseInt(c.slice(1), 16);
