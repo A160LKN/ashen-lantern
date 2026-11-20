@@ -2,7 +2,8 @@
 
 ## Браузеры
 - [x] Chromium — все E2E (локально и в CI)
-- [ ] Firefox — E2E в CI падают (4+ сценария), разбирается
+- [x] Firefox — все E2E (CI, Ubuntu); там нет WebGL и игра работает через Canvas-рендерер
+- [x] Без WebGL (Canvas-рендерер): мир, освещение и HUD отображаются, 60 FPS (Chromium с `--disable-webgl`, вручную по скриншоту)
 - [ ] Safari / WebKit — не проверялось
 - [ ] Реальные Chrome/Edge/Firefox на Windows — не проверялось
 
