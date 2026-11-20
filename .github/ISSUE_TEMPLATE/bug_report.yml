@@ -1,0 +1,68 @@
+name: Баг-репорт
+description: Сообщить о дефекте в игре
+title: "[BUG] "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Кратко
+      description: Что не так — одним предложением (где? что? когда?)
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Серьёзность (Severity)
+      options:
+        - S1 — Blocker (игра не запускается / потеря сохранения)
+        - S2 — Critical (нельзя пройти уровень, падение)
+        - S3 — Major (механика работает неправильно, есть обход)
+        - S4 — Minor (косметика, текст, неудобство)
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Область
+      options: [Управление, Бой, ИИ врагов, Босс, Лут и инвентарь, Уровни и коллизии, Интерфейс, Звук, Сохранения, Настройки, Производительность]
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Окружение
+      placeholder: "Версия/коммит, браузер и версия, ОС, разрешение окна, сложность"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+      placeholder: |
+        1. Новая игра, уровень «Тлеющий лес»
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактический результат
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемый результат
+    validations:
+      required: true
+  - type: dropdown
+    id: repro
+    attributes:
+      label: Воспроизводимость
+      options: [Всегда (100%), Часто (>50%), Иногда (<50%), Один раз]
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Вложения
+      description: Скриншот/видео, ошибки из консоли (F12), файл сохранения из localStorage

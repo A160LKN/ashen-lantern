@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-tooling:
+        dependency-type: development
+    ignore:
+      # typescript-eslint пока не поддерживает TypeScript 7 (у него нет JS API) — см. docs/qa/audit.md
+      - dependency-name: typescript
+        versions: ['>=6.1']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
