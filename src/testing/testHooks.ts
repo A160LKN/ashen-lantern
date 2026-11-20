@@ -14,6 +14,8 @@ export interface AshenTestApi {
   session: typeof Session;
   /** Активные (не на паузе) сцены. */
   activeScenes(): string[];
+  /** Журнал событий клавиатуры (DOM и обработанных меню) — для разбора нестабильных тестов. */
+  inputLog: { t: number; src: string; type: string; code: string; repeat: boolean; frame: number }[];
   /** Краткий снимок состояния для проверок. */
   state(): Record<string, unknown> | null;
   /** Прогнать n кадров синхронно (детерминированно, не зависит от частоты rAF). */
@@ -44,9 +46,17 @@ export function installTestHooks(game: Phaser.Game): void {
   game.events.on('poststep', () => {
     if (god && Session.data) Session.data.player.hp = getDerived(Session.data).maxHp;
   });
+  const inputLog: AshenTestApi['inputLog'] = [];
+  for (const type of ['keydown', 'keyup'] as const) {
+    window.addEventListener(type, (e) => {
+      inputLog.push({ t: Math.round(performance.now()), src: 'dom', type, code: e.code, repeat: e.repeat, frame: game.loop.frame });
+      if (inputLog.length > 500) inputLog.shift();
+    }, true);
+  }
   const api: AshenTestApi = {
     game,
     session: Session,
+    inputLog,
     activeScenes: () => game.scene.getScenes(true).map((s) => s.scene.key),
     state: () => {
       const d = Session.data;

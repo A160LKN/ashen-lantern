@@ -31,8 +31,9 @@ test('настройки громкости сохраняются после п
   await page.waitForTimeout(250);
   await page.keyboard.press('ArrowLeft'); // музыка 50% → 40%
   await page.keyboard.press('ArrowLeft'); // → 30%
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ashen-lantern.settings')!));
-  expect(stored.musicVolume).toBeCloseTo(0.3);
+  const log = await page.evaluate(() => (window as any).__ashen.inputLog);
+  await test.info().attach('input-log.json', { body: JSON.stringify(log, null, 1), contentType: 'application/json' });
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('ashen-lantern.settings') ?? '{}').musicVolume)).toBeCloseTo(0.3);
   await page.reload();
   await waitForMenuReady(page);
   expect(await page.evaluate(() => (window as any).__ashen.session.settings.musicVolume)).toBeCloseTo(0.3);
@@ -50,6 +51,11 @@ test('сохранение в слот и «Продолжить» после п
   await waitForScene(page, 'SaveLoad');
   await page.waitForTimeout(250);
   await page.keyboard.press('Enter'); // первый доступный слот — «Слот 1»
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ashen-lantern.save.1') !== null)).toBe(true).catch(async (err) => {
+    const log = await page.evaluate(() => (window as any).__ashen.inputLog);
+    await test.info().attach('input-log.json', { body: JSON.stringify(log, null, 1), contentType: 'application/json' });
+    throw err;
+  });
   const slot = await page.evaluate(() => JSON.parse(localStorage.getItem('ashen-lantern.save.1')!));
   expect(slot.summary.coins).toBe(77);
 
@@ -100,4 +106,21 @@ test('короткое нажатие внутри одного кадра не 
   const scenes = await activeScenes(page);
   await page.evaluate(() => (window as any).__ashen.resumeLoop());
   expect(scenes).toContain('Pause');
+});
+
+test('несколько нажатий за один кадр обрабатываются ровно по одному разу (регрессия BUG-011)', async ({ page }) => {
+  await openGame(page);
+  await unlockMenu(page);
+  await page.evaluate(() => (window as any).__ashen.game.scene.getScene('Menu').list.focus(3));
+  await page.keyboard.press('Enter');
+  await waitForScene(page, 'Settings');
+  await page.waitForTimeout(250);
+  // Цикл кадров стоит: оба нажатия приходят внутри одного кадра — как при низком FPS.
+  await page.evaluate(() => (window as any).__ashen.pauseLoop());
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await page.evaluate(() => (window as any).__ashen.step(2));
+  const volume = await page.evaluate(() => (window as any).__ashen.session.settings.musicVolume);
+  await page.evaluate(() => (window as any).__ashen.resumeLoop());
+  expect(volume).toBeCloseTo(0.3); // 50% − 2 × 10%
 });

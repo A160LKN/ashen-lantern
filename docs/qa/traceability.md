@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- |
 | R-01 | Игра запускается в браузере без ошибок | TC-BOOT-01…03, TC-BOOT-06 | e2e/smoke.spec.ts | ✅ авто |
 | R-02 | Новая игра, продолжение, загрузка | TC-BOOT-04, TC-BOOT-05, TC-SAVE-02 | e2e/smoke.spec.ts, e2e/menus.spec.ts | ✅ авто + вручную |
-| R-03 | Управление WASD, Shift, Space, E, Esc, мышь | TC-CTRL-01…06, TC-UI-01, TC-UI-06 | e2e/gameplay.spec.ts, e2e/menus.spec.ts | ⚠️ частично (выносливость, диагональ, залипание — не выполнялись) |
+| R-03 | Управление WASD, Shift, Space, E, Esc, мышь | TC-CTRL-01…06, TC-UI-01, TC-UI-06, TC-UI-07 | e2e/gameplay.spec.ts, e2e/menus.spec.ts | ⚠️ частично (выносливость, диагональ, залипание — не выполнялись) |
 | R-04 | Коллизии с окружением | TC-WORLD-01 | e2e/gameplay.spec.ts | ✅ авто |
 | R-05 | Несколько уровней, все цели достижимы | TC-WORLD-02…04, TC-PROG-02 | tests/levels.test.ts, e2e/gameplay.spec.ts | ✅ авто |
 | R-06 | Интерактивные объекты: NPC, сундуки, двери, ключи, маяки, святилища | TC-INT-01…04, TC-INT-10, TC-PROG-01 | e2e/gameplay.spec.ts | ⚠️ частично (дверь без ключа, горшки, маяк без осколков — не выполнялись) |

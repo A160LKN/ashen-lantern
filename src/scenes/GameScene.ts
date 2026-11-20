@@ -19,7 +19,7 @@ import { applyQuestEvent, ensureLevelQuests, questById, startQuest, type QuestEv
 import { saveGame } from '../systems/SaveSystem';
 import { DIFFICULTY } from '../systems/Settings';
 import { checkAchievements, persistProfile, Session } from '../systems/Session';
-import { openOverlay } from '../ui/widgets';
+import { onSceneKeyDown, openOverlay } from '../ui/widgets';
 import { setSolid, type Grid } from '../world/grid';
 import { animateTiles, buildLevel, type BuiltLevel } from '../world/LevelBuilder';
 import { findDropPosition, magnetVelocity } from '../world/loot';
@@ -352,7 +352,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     }) as Record<string, Phaser.Input.Keyboard.Key>;
     this.input.mouse?.disableContextMenu();
     this.pressed = new Set();
-    kb.on('keydown', (e: KeyboardEvent) => {
+    onSceneKeyDown(this, (e) => {
       if (!e.repeat) this.pressed.add(e.code);
     });
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {

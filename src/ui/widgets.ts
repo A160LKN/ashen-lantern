@@ -120,7 +120,7 @@ export class MenuList {
   index = 0;
   active = true;
   private readonly createdAt: number;
-  private handler: (e: KeyboardEvent) => void;
+  private off: () => void;
 
   constructor(private scene: Phaser.Scene, public items: MenuItem[], private opts: { onCancel?: () => void; horizontal?: boolean; instant?: boolean } = {}) {
     // Защита от «сквозного» нажатия, открывшего экран; при перестройке того же экрана не нужна.
@@ -134,9 +134,7 @@ export class MenuList {
     });
     const first = items.findIndex((i) => i.btn.enabled);
     this.focus(first >= 0 ? first : 0);
-    this.handler = (e) => this.onKey(e);
-    scene.input.keyboard?.on('keydown', this.handler);
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroy());
+    this.off = onSceneKeyDown(scene, (e) => this.onKey(e));
   }
 
   focus(i: number): void {
@@ -157,6 +155,8 @@ export class MenuList {
   }
 
   private onKey(e: KeyboardEvent): void {
+    const log = (window as unknown as { __ashen?: { inputLog: unknown[] } }).__ashen?.inputLog;
+    log?.push({ t: Math.round(performance.now()), src: `menu:${this.scene.scene.key}`, type: this.active ? 'handled' : 'inactive', code: e.code, repeat: e.repeat, frame: this.scene.game.loop.frame });
     if (!this.active || performance.now() - this.createdAt < 150) return;
     const prev = this.opts.horizontal ? ['ArrowLeft', 'KeyA'] : ['ArrowUp', 'KeyW'];
     const next = this.opts.horizontal ? ['ArrowRight', 'KeyD'] : ['ArrowDown', 'KeyS'];
@@ -177,8 +177,24 @@ export class MenuList {
   }
 
   destroy(): void {
-    this.scene.input.keyboard?.off('keydown', this.handler);
+    this.off();
   }
+}
+
+/**
+ * Подписка на нажатия клавиш, пока сцена запущена (не на паузе).
+ * Слушаем DOM напрямую: событие клавиатуры Phaser при нескольких нажатиях за один медленный кадр
+ * доставлялось обработчику повторно (BUG-011) — здесь каждое нажатие приходит ровно один раз.
+ */
+export function onSceneKeyDown(scene: Phaser.Scene, fn: (e: KeyboardEvent) => void): () => void {
+  const handler = (e: KeyboardEvent) => {
+    if (scene.sys.isActive()) fn(e);
+  };
+  window.addEventListener('keydown', handler);
+  const off = () => window.removeEventListener('keydown', handler);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, off);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, off);
+  return off;
 }
 
 /** Закрыть оверлей и продолжить сцену, из которой он был открыт. */

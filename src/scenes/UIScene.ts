@@ -11,7 +11,7 @@ import { getDerived, xpToNext } from '../systems/GameState';
 import { levelQuests } from '../systems/Quests';
 import { bus } from '../core/EventBus';
 import { Session } from '../systems/Session';
-import { COLORS, icon, panel, text } from '../ui/widgets';
+import { COLORS, icon, onSceneKeyDown, panel, text } from '../ui/widgets';
 
 interface DialogState {
   name: string;
@@ -104,7 +104,7 @@ export class UIScene extends Phaser.Scene {
     listen(this, 'dialog:open', (d: { name: string; lines: string[]; onClose?: () => void }) => this.openDialog(d));
     listen(this, 'quests:changed', () => this.refreshQuests());
 
-    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+    onSceneKeyDown(this, (e) => {
       if (!this.dialog) return;
       if (['KeyE', 'Space', 'Enter'].includes(e.code)) this.advanceDialog();
       if (e.code === 'Escape') this.closeDialog();

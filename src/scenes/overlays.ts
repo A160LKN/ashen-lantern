@@ -11,7 +11,7 @@ import { levelQuests } from '../systems/Quests';
 import { deleteSave, formatTime, listSlots, loadGame, saveGame } from '../systems/SaveSystem';
 import { DIFFICULTY, type Difficulty } from '../systems/Settings';
 import { checkAchievements, goToMenu, launchGame, persistSettings, Session } from '../systems/Session';
-import { closeOverlay, COLORS, dim, icon, MenuList, openOverlay, panel, text, UIButton } from '../ui/widgets';
+import { closeOverlay, COLORS, dim, icon, MenuList, onSceneKeyDown, openOverlay, panel, text, UIButton } from '../ui/widgets';
 
 type OverlayData = { from?: string; [k: string]: unknown };
 
@@ -277,7 +277,7 @@ export class InventoryScene extends Overlay {
     const onKey = (e: KeyboardEvent) => {
       if ((e.code === 'KeyI' || e.code === 'Tab') && performance.now() - opened > 150) this.close();
     };
-    this.input.keyboard?.on('keydown', onKey);
+    onSceneKeyDown(this, onKey);
   }
 
   private build(): void {
