@@ -74,3 +74,28 @@ export async function holdKeyFrames(page: Page, key: string, frames: number): Pr
     (window as Win).__ashen.resumeLoop();
   });
 }
+
+/**
+ * Ждёт сцену по игровому, а не реальному времени: собственный цикл кадров останавливается,
+ * кадры прогоняются синхронно, пока сцена не станет активной (не дольше maxFrames).
+ * На медленной машине CI игровые 1–3 секунды могут занимать больше 10 секунд реального времени.
+ */
+export async function stepUntilScene(page: Page, key: string, maxFrames = 1200): Promise<void> {
+  const ok = await page.evaluate(
+    ([k, max]) => {
+      const a = (window as Win).__ashen;
+      a.pauseLoop();
+      try {
+        for (let i = 0; i < (max as number); i++) {
+          if (a.activeScenes().includes(k)) return true;
+          a.step(1);
+        }
+        return a.activeScenes().includes(k);
+      } finally {
+        a.resumeLoop();
+      }
+    },
+    [key, maxFrames],
+  );
+  expect(ok, `сцена ${key} не открылась за ${maxFrames} кадров игрового времени`).toBe(true);
+}

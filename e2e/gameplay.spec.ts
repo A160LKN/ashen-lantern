@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { holdKey, holdKeyFrames, openGame, startNewGame, state, teleport, waitForScene } from './helpers';
+import { holdKey, holdKeyFrames, openGame, stepUntilScene, startNewGame, state, teleport, waitForScene } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await openGame(page);
@@ -104,7 +104,8 @@ test('гибель → экран поражения → возрождение 
   await page.evaluate(() => (window as any).__ashen.cheats.setHp(1));
   const sk = (await state(page)).enemies.find((e: any) => e.type === 'skeleton');
   await page.evaluate((s) => (window as any).__ashen.game.scene.getScene('Game').player.body.reset(s.x + 10, s.y - 5), sk);
-  await waitForScene(page, 'GameOver');
+  // Скелет должен сам заметить героя, замахнуться и ударить; ждём по игровому времени (до 20 с).
+  await stepUntilScene(page, 'GameOver');
   await page.waitForTimeout(250);
   await page.keyboard.press('Enter'); // «Возродиться у святилища»
   await waitForScene(page, 'Game');
@@ -143,5 +144,6 @@ test('босс: пробуждение, полоса здоровья, побе�
   await teleport(page, 20, 3);
   await expect.poll(async () => (await state(page)).prompt).toBe('Зажечь маяк (3/3)');
   await page.keyboard.press('KeyE');
-  await waitForScene(page, 'Victory');
+  // Финальный экран открывается через 2,6 с игрового времени после того, как маяк загорелся.
+  await stepUntilScene(page, 'Victory', 600);
 });
