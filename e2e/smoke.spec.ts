@@ -32,13 +32,28 @@ test.describe('Смоук', () => {
     expect(errors).toEqual([]);
   });
 
-  test('игра держит стабильную частоту кадров', async ({ page }, info) => {
+  test('игровая логика укладывается в бюджет кадра', async ({ page }, info) => {
     await openGame(page);
     await startNewGame(page);
     await page.waitForTimeout(3000);
+    // Справочно: FPS в CI зависит от машины (WebGL там программный), поэтому не проверяется жёстко.
     const fps = await page.evaluate(() => (window as any).__ashen.game.loop.actualFps);
-    info.annotations.push({ type: 'fps', description: fps.toFixed(1) });
-    // Порог мягкий: в CI WebGL работает программно (SwiftShader). Цель на реальном ПК — 60.
-    expect(fps).toBeGreaterThan(20);
+    info.annotations.push({ type: 'fps (справочно)', description: fps.toFixed(1) });
+    // Проверяется время логики на кадр — ИИ врагов, поиск пути, физика, освещение — без рендера.
+    const msPerFrame = await page.evaluate(() => {
+      const a = (window as any).__ashen;
+      a.pauseLoop();
+      let t = performance.now();
+      const start = performance.now();
+      for (let i = 0; i < 300; i++) {
+        t += 16.67;
+        a.game.scene.update(t, 16.67);
+      }
+      const ms = (performance.now() - start) / 300;
+      a.resumeLoop();
+      return ms;
+    });
+    info.annotations.push({ type: 'логика, мс/кадр', description: msPerFrame.toFixed(2) });
+    expect(msPerFrame).toBeLessThan(4); // четверть бюджета кадра при 60 FPS (16,7 мс)
   });
 });
