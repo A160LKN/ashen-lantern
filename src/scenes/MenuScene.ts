@@ -9,7 +9,7 @@ import { audio } from '../systems/Audio';
 import { createNewGame } from '../systems/GameState';
 import { latestSlot, loadGame } from '../systems/SaveSystem';
 import { launchGame, Session } from '../systems/Session';
-import { COLORS, MenuList, openOverlay, panel, text, UIButton, dim } from '../ui/widgets';
+import { COLORS, MenuList, onSceneEvent, openOverlay, panel, text, UIButton, dim } from '../ui/widgets';
 
 function backdrop(): HTMLCanvasElement {
   const W = 320;
@@ -108,7 +108,7 @@ export class MenuScene extends Phaser.Scene {
       this.input.keyboard?.once('keydown', start);
       this.input.once('pointerdown', start);
     }
-    this.events.on(Phaser.Scenes.Events.RESUME, () => {
+    onSceneEvent(this, Phaser.Scenes.Events.RESUME, () => {
       this.input.keyboard?.resetKeys();
       this.refreshContinue();
     });

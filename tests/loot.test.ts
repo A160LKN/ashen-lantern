@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mulberry32 } from '../src/core/rng';
 import { createGrid, isSolid, setSolid } from '../src/world/grid';
-import { findDropPosition, MAGNET_RADIUS, magnetVelocity } from '../src/world/loot';
+import { COIN_PILE, findDropPosition, MAGNET_RADIUS, magnetVelocity, splitCoins } from '../src/world/loot';
 
 describe('выпадение предметов (регрессия BUG-007)', () => {
   it('предмет, выпавший у стены, никогда не оказывается внутри стены', () => {
@@ -45,5 +45,21 @@ describe('магнит монет (регрессия BUG-006)', () => {
 
   it('монета ровно на игроке не получает NaN', () => {
     expect(magnetVelocity(5, 5, 5, 5)).toEqual({ vx: 0, vy: 0 });
+  });
+});
+
+describe('разбиение монет (регрессия BUG-013)', () => {
+  it('сумма частей равна выпавшей сумме для любого значения', () => {
+    for (let total = 0; total <= 100; total++) {
+      const parts = splitCoins(total);
+      expect(parts.reduce((s, v) => s + v, 0)).toBe(total);
+      expect(parts.every((v) => v === 1 || v === COIN_PILE)).toBe(true);
+    }
+  });
+
+  it('8 и 9 монет — одиночными, без кучки в 10', () => {
+    expect(splitCoins(8)).toEqual(Array(8).fill(1));
+    expect(splitCoins(9)).toEqual(Array(9).fill(1));
+    expect(splitCoins(18)).toEqual([10, ...Array(8).fill(1)]);
   });
 });

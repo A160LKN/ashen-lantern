@@ -2,6 +2,19 @@
 import { isSolid, type Grid } from './grid';
 
 export const MAGNET_RADIUS = 42;
+export const COIN_PILE = 10;
+
+/** Разбивает сумму монет на кучки по 10 и одиночные монеты; сумма частей всегда равна total. */
+export function splitCoins(total: number): number[] {
+  const parts: number[] = [];
+  let left = Math.max(0, Math.floor(total));
+  while (left >= COIN_PILE) {
+    parts.push(COIN_PILE);
+    left -= COIN_PILE;
+  }
+  for (let i = 0; i < left; i++) parts.push(1);
+  return parts;
+}
 
 /**
  * Точка, куда «отлетает» выпавший предмет. Цель выбирается случайно в радиусе разлёта,

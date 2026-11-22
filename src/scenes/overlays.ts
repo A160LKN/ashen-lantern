@@ -11,7 +11,7 @@ import { levelQuests } from '../systems/Quests';
 import { deleteSave, formatTime, listSlots, loadGame, saveGame } from '../systems/SaveSystem';
 import { DIFFICULTY, type Difficulty } from '../systems/Settings';
 import { checkAchievements, goToMenu, launchGame, persistSettings, Session } from '../systems/Session';
-import { closeOverlay, COLORS, dim, icon, MenuList, onSceneKeyDown, openOverlay, panel, text, UIButton } from '../ui/widgets';
+import { closeOverlay, COLORS, dim, icon, MenuList, onSceneEvent, onSceneKeyDown, openOverlay, panel, text, UIButton } from '../ui/widgets';
 
 type OverlayData = { from?: string; [k: string]: unknown };
 
@@ -20,6 +20,7 @@ abstract class Overlay extends Phaser.Scene {
   protected list: MenuList | null = null;
   /** true после первой отрисовки — повторные перестройки не включают задержку ввода. */
   protected built = false;
+  private resumeHooked = false;
 
   init(d: OverlayData): void {
     this.from = d.from;
@@ -32,10 +33,17 @@ abstract class Overlay extends Phaser.Scene {
     const cy = GAME_HEIGHT / 2;
     panel(this, cx, cy, w, h, 'panel');
     text(this, cx, cy - h / 2 + 34, title, 30, COLORS.gold).setOrigin(0.5);
-    this.events.on(Phaser.Scenes.Events.RESUME, () => {
-      this.input.keyboard?.resetKeys();
-      this.onResumed();
-    });
+    // frame() вызывается и при перестройке экрана — подписываемся один раз за запуск сцены.
+    if (!this.resumeHooked) {
+      this.resumeHooked = true;
+      onSceneEvent(this, Phaser.Scenes.Events.RESUME, () => {
+        this.input.keyboard?.resetKeys();
+        this.onResumed();
+      });
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.resumeHooked = false;
+      });
+    }
     return { cx, cy, top: cy - h / 2, left: cx - w / 2 };
   }
 

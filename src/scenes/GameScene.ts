@@ -19,10 +19,10 @@ import { applyQuestEvent, ensureLevelQuests, questById, startQuest, type QuestEv
 import { saveGame } from '../systems/SaveSystem';
 import { DIFFICULTY } from '../systems/Settings';
 import { checkAchievements, persistProfile, Session } from '../systems/Session';
-import { onSceneKeyDown, openOverlay } from '../ui/widgets';
+import { onSceneEvent, onSceneKeyDown, openOverlay } from '../ui/widgets';
 import { setSolid, type Grid } from '../world/grid';
 import { animateTiles, buildLevel, type BuiltLevel } from '../world/LevelBuilder';
-import { findDropPosition, magnetVelocity } from '../world/loot';
+import { findDropPosition, magnetVelocity, splitCoins } from '../world/loot';
 import { buildGrid, ENEMY_CHARS, parseLevel, type ParsedEntity, type ParsedLevel } from '../world/levelParser';
 import { Lighting, type LightSource } from '../world/Lighting';
 
@@ -173,7 +173,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
       this.physics.world.resume();
       this.inputLockUntil = this.time.now + 200;
     });
-    this.events.on(Phaser.Scenes.Events.RESUME, () => {
+    onSceneEvent(this, Phaser.Scenes.Events.RESUME, () => {
       this.input.keyboard?.resetKeys();
       this.pressed.clear();
       this.inputLockUntil = this.time.now + 150;
@@ -558,12 +558,7 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     this.burst(e.cx, e.cy, hex(P.fire3), 12);
     const isBoss = e.def.type === 'boss';
     if (!e.minion) {
-      let coins = randInt(e.def.coins[0], e.def.coins[1]);
-      while (coins > 0) {
-        const v = coins >= 10 ? 10 : 1;
-        coins -= v;
-        this.spawnPickup('coin', e.cx, e.cy, v, undefined, true);
-      }
+      for (const v of splitCoins(randInt(e.def.coins[0], e.def.coins[1]))) this.spawnPickup('coin', e.cx, e.cy, v, undefined, true);
       if (Math.random() < e.def.dropPotion) this.spawnPickup('potion', e.cx, e.cy, 1, undefined, true);
       if (Math.random() < e.def.dropOil) this.spawnPickup('oil', e.cx, e.cy, 30, undefined, true);
       const lv = addXp(data, e.def.xp);
@@ -780,9 +775,8 @@ export class GameScene extends Phaser.Scene implements EnemyWorld {
     data.stats.chestsOpened++;
     const x = s.x;
     const y = s.y + 10;
-    const coins = randInt(8, 18);
-    this.spawnPickup('coin', x, y, 10, undefined, true);
-    for (let i = 0; i < coins - 10; i++) this.spawnPickup('coin', x, y, 1, undefined, true);
+    // Раньше кучка в 10 монет создавалась всегда, и при выпадении 8–9 монет игрок получал 10 (BUG-013).
+    for (const v of splitCoins(randInt(8, 18))) this.spawnPickup('coin', x, y, v, undefined, true);
     if (Math.random() < 0.55) this.spawnPickup('potion', x, y, 1, undefined, true);
     if (Math.random() < 0.4) this.spawnPickup('oil', x, y, 40, undefined, true);
     this.burst(x, s.y, hex(P.gold2), 12);

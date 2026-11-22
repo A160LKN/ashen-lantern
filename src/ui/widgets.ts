@@ -197,6 +197,15 @@ export function onSceneKeyDown(scene: Phaser.Scene, fn: (e: KeyboardEvent) => vo
   return off;
 }
 
+/**
+ * Подписка на событие сцены до её остановки. Подписки через scene.events переживают restart(),
+ * поэтому без отписки они копились с каждым перезапуском сцены (BUG-012).
+ */
+export function onSceneEvent(scene: Phaser.Scene, event: string, fn: (...args: any[]) => void): void {
+  scene.events.on(event, fn);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.events.off(event, fn));
+}
+
 /** Закрыть оверлей и продолжить сцену, из которой он был открыт. */
 export function closeOverlay(scene: Phaser.Scene, from?: string): void {
   scene.scene.stop();
