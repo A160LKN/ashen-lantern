@@ -67,6 +67,13 @@ describe('уровни', () => {
         }
       });
 
+      it('контрольная точка святилища (клетка под ним) проходима и достижима', () => {
+        const { reach } = simulate(i);
+        for (const sh of lvl.entities.filter((e) => e.ch === 'S')) {
+          expect(reach(sh.x, sh.y + 1), `checkpoint below ${sh.id}`).toBe(true);
+        }
+      });
+
       it('враги стоят на проходимых клетках и не замурованы', () => {
         const g = buildGrid(lvl, () => true);
         for (const e of lvl.entities.filter((x) => ENEMY_CHARS[x.ch])) {

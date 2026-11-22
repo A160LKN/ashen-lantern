@@ -5,6 +5,7 @@
  */
 import type Phaser from 'phaser';
 import { TILE } from '../config';
+import { audio } from '../systems/Audio';
 import { getDerived } from '../systems/GameState';
 import { Session } from '../systems/Session';
 import type { GameScene } from '../scenes/GameScene';
@@ -16,6 +17,8 @@ export interface AshenTestApi {
   activeScenes(): string[];
   /** Журнал событий клавиатуры (DOM и обработанных меню) — для разбора нестабильных тестов. */
   inputLog: { t: number; src: string; type: string; code: string; repeat: boolean; frame: number }[];
+  /** Состояние звукового движка (контекст, трек, фон, громкость). */
+  audio(): ReturnType<typeof audio.debugState>;
   /** Краткий снимок состояния для проверок. */
   state(): Record<string, unknown> | null;
   /** Прогнать n кадров синхронно (детерминированно, не зависит от частоты rAF). */
@@ -57,6 +60,7 @@ export function installTestHooks(game: Phaser.Game): void {
     game,
     session: Session,
     inputLog,
+    audio: () => audio.debugState(),
     activeScenes: () => game.scene.getScenes(true).map((s) => s.scene.key),
     state: () => {
       const d = Session.data;

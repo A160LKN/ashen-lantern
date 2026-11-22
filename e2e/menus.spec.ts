@@ -124,3 +124,56 @@ test('несколько нажатий за один кадр обрабаты�
   await page.evaluate(() => (window as any).__ashen.resumeLoop());
   expect(volume).toBeCloseTo(0.3); // 50% − 2 × 10%
 });
+
+test('TC-SAVE-07: удаление сохранения требует подтверждения', async ({ page }) => {
+  await openGame(page);
+  await startNewGame(page);
+  await page.keyboard.press('Escape');
+  await waitForScene(page, 'Pause');
+  await page.waitForTimeout(250);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await waitForScene(page, 'SaveLoad');
+  await page.waitForTimeout(250);
+  await page.keyboard.press('Enter'); // сохранить в слот 1
+  expect(await page.evaluate(() => localStorage.getItem('ashen-lantern.save.1'))).not.toBeNull();
+  // Фокус остаётся на слоте 1; стрелка вправо — кнопка удаления
+  await page.keyboard.press('ArrowRight');
+  expect(await page.evaluate(() => localStorage.getItem('ashen-lantern.save.1'))).not.toBeNull(); // первое нажатие не удаляет
+  await page.keyboard.press('ArrowRight');
+  expect(await page.evaluate(() => localStorage.getItem('ashen-lantern.save.1'))).toBeNull();
+});
+
+test('Переполненное хранилище: сообщение «Не удалось сохранить», игра не падает', async ({ page }) => {
+  const errors = await openGame(page);
+  await startNewGame(page);
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    };
+  });
+  await page.keyboard.press('Escape');
+  await waitForScene(page, 'Pause');
+  await page.waitForTimeout(250);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await waitForScene(page, 'SaveLoad');
+  await page.waitForTimeout(250);
+  await page.keyboard.press('Enter');
+  const status = await page.evaluate(() => (window as any).__ashen.game.scene.getScene('SaveLoad').status.text);
+  expect(status).toBe('Не удалось сохранить (хранилище недоступно)');
+  expect(errors).toEqual([]);
+});
+
+test('Изменение размера окна во время игры: холст подстраивается, ошибок нет', async ({ page }) => {
+  const errors = await openGame(page);
+  await startNewGame(page);
+  await page.setViewportSize({ width: 640, height: 480 });
+  await expect.poll(async () => (await page.locator('canvas').boundingBox())!.width).toBeLessThanOrEqual(640);
+  const small = (await page.locator('canvas').boundingBox())!;
+  expect(small.width / small.height).toBeCloseTo(16 / 9, 1);
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await expect.poll(async () => (await page.locator('canvas').boundingBox())!.width).toBeGreaterThan(1500);
+  expect(await activeScenes(page)).toContain('Game');
+  expect(errors).toEqual([]);
+});

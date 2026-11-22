@@ -62,6 +62,18 @@ class AudioEngine {
   private ambientType: Theme | null = null;
   private lastPlay = new Map<Sfx, number>();
 
+  /** Состояние движка для тестов и отладки (только чтение). */
+  debugState(): { context: string; track: MusicTrack | null; ambient: Theme | null; sequencer: boolean; musicVolume: number; sfxVolume: number } {
+    return {
+      context: this.ctx ? this.ctx.state : 'none',
+      track: this.track,
+      ambient: this.ambientType,
+      sequencer: this.seqTimer !== null,
+      musicVolume: this.musicVol,
+      sfxVolume: this.sfxVol,
+    };
+  }
+
   get ready(): boolean {
     return !!this.ctx && this.ctx.state === 'running';
   }
