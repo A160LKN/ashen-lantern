@@ -63,10 +63,12 @@ class AudioEngine {
   private lastPlay = new Map<Sfx, number>();
 
   /** Состояние движка для тестов и отладки (только чтение). */
-  debugState(): { context: string; track: MusicTrack | null; ambient: Theme | null; sequencer: boolean; musicVolume: number; sfxVolume: number } {
+  debugState(): { context: string; track: MusicTrack | null; pendingTrack: MusicTrack | null; ambient: Theme | null; ambientPlaying: boolean; sequencer: boolean; musicVolume: number; sfxVolume: number } {
     return {
       context: this.ctx ? this.ctx.state : 'none',
       track: this.track,
+      pendingTrack: this.pendingTrack,
+      ambientPlaying: this.ambientNodes.length > 0,
       ambient: this.ambientType,
       sequencer: this.seqTimer !== null,
       musicVolume: this.musicVol,
@@ -109,17 +111,30 @@ class AudioEngine {
         const ch = this.noise.getChannelData(0);
         for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
         this.applyVolumes();
+        // resume() асинхронный: контекст может «проснуться» позже — тогда и запускаем отложенное (BUG-014).
+        this.ctx.onstatechange = () => this.flushPending();
+        // Если браузер не дал запустить звук с первого жеста, пробуем на каждом следующем.
+        const retry = () => {
+          if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume().catch(() => undefined);
+        };
+        for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, retry, { passive: true });
       }
-      if (this.ctx.state === 'suspended') void this.ctx.resume();
-      if (this.pendingTrack) {
-        const t = this.pendingTrack;
-        this.pendingTrack = null;
-        this.playMusic(t);
-      }
-      if (this.ambientType && this.ambientNodes.length === 0) this.setAmbient(this.ambientType);
+      if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => undefined);
+      this.flushPending();
     } catch {
       this.ctx = null;
     }
+  }
+
+  /** Запускает отложенные музыку и фон, как только контекст работает. */
+  private flushPending(): void {
+    if (!this.ready) return;
+    if (this.pendingTrack) {
+      const t = this.pendingTrack;
+      this.pendingTrack = null;
+      this.playMusic(t);
+    }
+    if (this.ambientType && this.ambientNodes.length === 0) this.setAmbient(this.ambientType);
   }
 
   setVolumes(music: number, sfx: number): void {
@@ -219,6 +234,7 @@ class AudioEngine {
     if (track === this.track && this.seqTimer !== null) return;
     this.stopMusic();
     this.track = track;
+    this.pendingTrack = null; // новый запрос отменяет отложенный трек
     if (!track) return;
     if (!this.ready) {
       this.pendingTrack = track;
