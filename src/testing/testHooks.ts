@@ -3,7 +3,7 @@
  * Подключается только в dev-сборке или при запуске с параметром `?test`.
  * В обычной production-игре объект window.__ashen отсутствует.
  */
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import { TILE } from '../config';
 import { audio } from '../systems/Audio';
 import { getDerived } from '../systems/GameState';
@@ -23,6 +23,11 @@ export interface AshenTestApi {
   state(): Record<string, unknown> | null;
   /** Прогнать n кадров синхронно (детерминированно, не зависит от частоты rAF). */
   step(n: number): void;
+  /**
+   * То же без отрисовки: логика, физика, таймеры и ввод идут как обычно, кадр не рисуется.
+   * Для длинных проверок логики — в CI рендер программный и медленный.
+   */
+  stepLogic(n: number): void;
   /** Остановить/возобновить собственный цикл кадров игры (для точных по времени проверок). */
   pauseLoop(): void;
   resumeLoop(): void;
@@ -88,6 +93,14 @@ export function installTestHooks(game: Phaser.Game): void {
       for (let i = 0; i < n; i++) {
         t = Math.max(t + 16.67, performance.now());
         game.step(t, 16.67);
+      }
+    },
+    stepLogic: (n) => {
+      for (let i = 0; i < n; i++) {
+        t = Math.max(t + 16.67, performance.now());
+        game.events.emit(Phaser.Core.Events.PRE_STEP, t, 16.67);
+        game.scene.update(t, 16.67);
+        game.events.emit(Phaser.Core.Events.POST_STEP, t, 16.67);
       }
     },
     pauseLoop: () => game.loop.sleep(),

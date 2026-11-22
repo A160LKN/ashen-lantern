@@ -8,12 +8,12 @@ import { openGame, startNewGame, state, teleport, waitForScene } from './helpers
 const A = (page: Page, fn: string, arg?: unknown) =>
   page.evaluate(([f, a]) => new Function('A', 'arg', f)((window as any).__ashen, a), [fn, arg] as const);
 
-/** Прогнать кадры при остановленном цикле. */
+/** Прогнать кадры игровой логики (без отрисовки) при остановленном цикле. */
 async function frames(page: Page, n: number): Promise<void> {
   await page.evaluate((k) => {
     const a = (window as any).__ashen;
     a.pauseLoop();
-    a.step(k);
+    a.stepLogic(k);
     a.resumeLoop();
   }, n);
 }
@@ -22,16 +22,16 @@ async function frames(page: Page, n: number): Promise<void> {
 async function holdFrames(page: Page, keys: string[], n: number): Promise<void> {
   await A(page, 'A.pauseLoop()');
   for (const k of keys) await page.keyboard.down(k);
-  await A(page, 'A.step(arg)', n);
+  await A(page, 'A.stepLogic(arg)', n);
   for (const k of keys) await page.keyboard.up(k);
-  await A(page, 'A.step(2); A.resumeLoop()');
+  await A(page, 'A.stepLogic(2); A.resumeLoop()');
 }
 
 /** Нажать клавишу и прогнать пару кадров, чтобы игра её обработала. */
 async function tap(page: Page, key: string): Promise<void> {
   await A(page, 'A.pauseLoop()');
   await page.keyboard.press(key);
-  await A(page, 'A.step(3); A.resumeLoop()');
+  await A(page, 'A.stepLogic(3); A.resumeLoop()');
 }
 
 const toasts = (page: Page) =>
@@ -212,4 +212,25 @@ test('Звук: у уровня своя музыка и фон; без звук
   await A(page, 'A.cheats.loadLevel(1)');
   await expect.poll(async () => ((await A(page, 'return A.audio()')) as any).ambient).toBe('crypt');
   await check('crypt');
+});
+
+test('Подписки на события не копятся при перезапуске сцен (регрессия BUG-012)', async ({ page }) => {
+  const counts = () =>
+    page.evaluate(() => {
+      const a = (window as any).__ashen;
+      const g = a.game.scene.getScene('Game');
+      const ui = a.game.scene.getScene('UI');
+      return { resume: g.events.listenerCount('resume'), gamePointer: g.input.listenerCount('pointerdown'), uiPointer: ui.input.listenerCount('pointerdown') };
+    });
+  const before = await counts();
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate(() => {
+      const a = (window as any).__ashen;
+      a.game.scene.getScene('Game').scene.restart();
+      a.pauseLoop();
+      a.step(5);
+      a.resumeLoop();
+    });
+  }
+  expect(await counts()).toEqual(before);
 });
